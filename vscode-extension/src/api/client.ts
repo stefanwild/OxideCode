@@ -654,6 +654,16 @@ export class ApiClient {
 		return `VSCode (${vscode.version}) - OS: ${os.platform()} ${os.arch()} - OxideCode v${extensionVersion} [${backend}/${promptStyle}]`;
 	}
 
+	private getRelativePathForUri(uri: vscode.Uri): string {
+		const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+		if (!workspaceFolder) {
+			return toUnixPath(uri.fsPath) || uri.toString();
+		}
+
+		const relativePath = vscode.workspace.asRelativePath(uri, false);
+		return toUnixPath(relativePath) || toUnixPath(uri.fsPath) || uri.toString();
+	}
+
 	private getRepoName(document: vscode.TextDocument): string {
 		return (
 			vscode.workspace.getWorkspaceFolder(document.uri)?.name || "untitled"

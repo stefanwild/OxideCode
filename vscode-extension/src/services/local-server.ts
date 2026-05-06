@@ -116,14 +116,18 @@ export class LocalAutocompleteServer implements vscode.Disposable {
 		this.stopServer();
 
 		const port = config.localPort;
+		const modelEndpoint = normalizeSweepAutocompleteEndpoint(
+			config.provider.baseUrl,
+		);
 		console.log(
-			`[Sweep] Starting local autocomplete server on port ${port}...`,
+			`[Sweep] Starting local autocomplete server on port ${port} using model endpoint ${modelEndpoint}...`,
 		);
 
 		this.process = child_process.spawn(
 			uvxPath,
 			["sweep-autocomplete", "--port", String(port)],
 			{
+				env: this.buildServerEnv(),
 				stdio: ["ignore", "pipe", "pipe"],
 				detached: false,
 			},
@@ -159,6 +163,14 @@ export class LocalAutocompleteServer implements vscode.Disposable {
 		throw new Error(
 			`Local server did not become healthy within ${SERVER_START_TIMEOUT_MS / 1000}s`,
 		);
+	}
+
+	private buildServerEnv(): NodeJS.ProcessEnv {
+		const endpoint = normalizeSweepAutocompleteEndpoint(config.provider.baseUrl);
+		return {
+			...process.env,
+			NEXT_EDIT_AUTOCOMPLETE_ENDPOINT: endpoint,
+		};
 	}
 
 	private async resolveUvx(): Promise<string | null> {
@@ -258,4 +270,9 @@ export class LocalAutocompleteServer implements vscode.Disposable {
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeSweepAutocompleteEndpoint(baseUrl: string): string {
+	const trimmed = baseUrl.trim().replace(/\/+$/, "");
+	return trimmed.endsWith("/v1") ? trimmed.slice(0, -3) : trimmed;
 }
